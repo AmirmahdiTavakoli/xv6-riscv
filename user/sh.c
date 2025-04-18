@@ -13,8 +13,6 @@
 
 #define MAXARGS 10
 
-#define NULL ((void*)0)
-
 struct cmd {
   int type;
 };
@@ -56,19 +54,6 @@ void panic(char*);
 struct cmd *parsecmd(char*);
 void runcmd(struct cmd*) __attribute__((noreturn));
 
-// stringh manually
-
-char* strstr(const char *haystack, const char *needle) {
-  for (; *haystack; haystack++) {
-    const char *h = haystack, *n = needle;
-    while (*h && *n && *h == *n) {
-      h++;
-      n++;
-    }
-    if (!*n) return (char*)haystack;
-  }
-  return NULL;
-}
 // Execute cmd.  Never returns.
 void
 runcmd(struct cmd *cmd)
@@ -89,48 +74,67 @@ runcmd(struct cmd *cmd)
 
     case EXEC:
     ecmd = (struct execcmd*)cmd;
-    if (ecmd->argv[0] == 0)
+    if(ecmd->argv[0] == 0)
       exit(1);
-  
-    // Handle "!" command
-    if (strcmp(ecmd->argv[0], "!") == 0) {
-      if (ecmd->argv[1]) {
-        char *message = ecmd->argv[1];
-        int len = strlen(message);
-  
-        // Extract content between < and >
-        char *content = message ;      // Skip '<'
-        //content[len-1] = '\0';           // Remove '>' (len-2 because len includes both < and >)
-  
-        // Check length (now len-2 because we stripped < and >)
-        if (strlen(content) > 512) {
-          printf("Message too long\n");
-          exit(0);
+
+    if(strcmp(ecmd->argv[0], "!") == 0){
+      char text[513]; /* /0 */
+      int len = 0; /* current length inside text */
+      int check = 0; /* flag */
+      text[0] = 0;
+
+      /* build message from argv[1..] */
+      for(int i = 1; ecmd->argv[i]; i++){
+        /* insert a single space between words */
+        if(i > 1){
+          if(len < 512) text[len] = ' ';
+          else check = 1;
+          if(len < 512) len++;
         }
-  
-        // Print < >content (restoring the outer < >)
-        printf(" %s\n", content);
-  
-        // Highlight "os" in blue
-        char *os_pos = strstr(content, "os");
-        if (os_pos != NULL) {
-          // Print up to "os", then print "os" in blue, then the rest
-          for (int i = 0; i < strlen(content); i++) {
-            if (&content[i] == os_pos) {
-              printf("\033[34mos\033[0m");
-              i++; // Skip 's'
+
+        /* copy current word character‑by‑character */
+        for(char *s = ecmd->argv[i]; *s; s++){
+          if(len < 512) text[len] = *s;
+          else check = 1;
+          if(len < 512) len++;
+        }
+      }
+      text[len < 512 ? len : 512] = 0; /* NUL‑terminate */
+
+      if(check){
+        printf("Message too long\n");
+      } else {
+        /* detect substring "os" */
+        int has_os = 0;
+        for(int i = 0; i + 1 < len; i++){
+          if(text[i] == 'o' && text[i + 1] == 's')
+          { 
+            has_os = 1;
+            break;
+          }
+        }
+
+        if(has_os){
+          /* print message, highlighting every "os" in blue */
+          for(int i = 0; i < len; ){
+            if(i + 1 < len && text[i] == 'o' && text[i + 1] == 's'){
+              printf("\x1b[34m"); /* start blue */
+              write(1, "os", 2);
+              printf("\x1b[0m"); /* reset color */
+              i += 2;
             } else {
-              printf("%c", content[i]);
+              write(1, &text[i], 1);
+              i++;
             }
           }
           printf("\n");
+        } else {
+          printf("%s\n", text);
         }
-      } else {
-        printf("Usage: ! <message>\n");
       }
-      exit(0);
+
+      exit(0); 
     }
-  
     exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
