@@ -13,6 +13,8 @@
 
 #define MAXARGS 10
 
+#define NULL ((void*)0)
+
 struct cmd {
   int type;
 };
@@ -54,6 +56,19 @@ void panic(char*);
 struct cmd *parsecmd(char*);
 void runcmd(struct cmd*) __attribute__((noreturn));
 
+// stringh manually
+
+char* strstr(const char *haystack, const char *needle) {
+  for (; *haystack; haystack++) {
+    const char *h = haystack, *n = needle;
+    while (*h && *n && *h == *n) {
+      h++;
+      n++;
+    }
+    if (!*n) return (char*)haystack;
+  }
+  return NULL;
+}
 // Execute cmd.  Never returns.
 void
 runcmd(struct cmd *cmd)
@@ -72,10 +87,50 @@ runcmd(struct cmd *cmd)
   default:
     panic("runcmd");
 
-  case EXEC:
+    case EXEC:
     ecmd = (struct execcmd*)cmd;
-    if(ecmd->argv[0] == 0)
+    if (ecmd->argv[0] == 0)
       exit(1);
+  
+    // Handle "!" command
+    if (strcmp(ecmd->argv[0], "!") == 0) {
+      if (ecmd->argv[1]) {
+        char *message = ecmd->argv[1];
+        int len = strlen(message);
+  
+        // Extract content between < and >
+        char *content = message ;      // Skip '<'
+        //content[len-1] = '\0';           // Remove '>' (len-2 because len includes both < and >)
+  
+        // Check length (now len-2 because we stripped < and >)
+        if (strlen(content) > 512) {
+          printf("Message too long\n");
+          exit(0);
+        }
+  
+        // Print < >content (restoring the outer < >)
+        printf(" %s\n", content);
+  
+        // Highlight "os" in blue
+        char *os_pos = strstr(content, "os");
+        if (os_pos != NULL) {
+          // Print up to "os", then print "os" in blue, then the rest
+          for (int i = 0; i < strlen(content); i++) {
+            if (&content[i] == os_pos) {
+              printf("\033[34mos\033[0m");
+              i++; // Skip 's'
+            } else {
+              printf("%c", content[i]);
+            }
+          }
+          printf("\n");
+        }
+      } else {
+        printf("Usage: ! <message>\n");
+      }
+      exit(0);
+    }
+  
     exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
