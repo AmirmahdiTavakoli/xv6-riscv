@@ -6,13 +6,13 @@
 void log_message(int level, const char *message) {
   char *level_str;
   switch(level) {
-    case LOG_LEVEL_INFO:
+    case INFO:
       level_str = "INFO";
       break;
-    case LOG_LEVEL_WARN:
+    case WARN:
       level_str = "WARNING";
       break;
-    case LOG_LEVEL_ERROR:
+    case ERROR:
       level_str = "ERROR";
       break;
     default:
