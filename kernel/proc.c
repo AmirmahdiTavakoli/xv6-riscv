@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "custom_logger.h"
 
 struct cpu cpus[NCPU];
 
@@ -693,3 +694,4 @@ procdump(void)
     printf("\n");
   }
 }
+

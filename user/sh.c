@@ -77,34 +77,33 @@ runcmd(struct cmd *cmd)
     if(ecmd->argv[0] == 0)
       exit(1);
 
-    if(strcmp(ecmd->argv[0], "!") == 0){
-      char text[513]; /* /0 */
-      int len = 0; /* current length inside text */
-      int check = 0; /* flag */
+    /*if(strcmp(ecmd->argv[0], "!") == 0){
+      char text[513]; // /0 
+      int len = 0; // current length inside text 
+      int check = 0; // flag 
       text[0] = 0;
 
-      /* build message from argv[1..] */
       for(int i = 1; ecmd->argv[i]; i++){
-        /* insert a single space between words */
+        // insert a single space between words 
         if(i > 1){
           if(len < 512) text[len] = ' ';
           else check = 1;
           if(len < 512) len++;
         }
 
-        /* copy current word character‑by‑character */
+        // copy current word character‑by‑character 
         for(char *s = ecmd->argv[i]; *s; s++){
           if(len < 512) text[len] = *s;
           else check = 1;
           if(len < 512) len++;
         }
       }
-      text[len < 512 ? len : 512] = 0; /* NUL‑terminate */
+      text[len < 512 ? len : 512] = 0; 
 
       if(check){
         printf("Message too long\n");
       } else {
-        /* detect substring "os" */
+        // detect substring "os" 
         int has_os = 0;
         for(int i = 0; i + 1 < len; i++){
           if(text[i] == 'o' && text[i + 1] == 's')
@@ -115,12 +114,12 @@ runcmd(struct cmd *cmd)
         }
 
         if(has_os){
-          /* print message, highlighting every "os" in blue */
+          // print message, highlighting every "os" in blue 
           for(int i = 0; i < len; ){
             if(i + 1 < len && text[i] == 'o' && text[i + 1] == 's'){
-              printf("\x1b[34m"); /* start blue */
+              printf("\x1b[34m"); // start blue 
               write(1, "os", 2);
-              printf("\x1b[0m"); /* reset color */
+              printf("\x1b[0m"); // reset color 
               i += 2;
             } else {
               write(1, &text[i], 1);
@@ -134,7 +133,7 @@ runcmd(struct cmd *cmd)
       }
 
       exit(0); 
-    }
+    }*/
     exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
     break;
