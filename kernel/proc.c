@@ -693,3 +693,103 @@ procdump(void)
     printf("\n");
   }
 }
+struct thread *
+allocthread(uint64 start_thread, uint64 stack_address, uint64 arg)
+{
+  struct proc *p = myproc();
+  if (!initthread(p)) // We will implement initthread later
+    return 0;
+  for (struct thread *t = p->threads; t < &p->threads[NTHREAD]; t++) {
+    if (t->state == THREAD_UNUSED) {
+      t->id = allocpid();
+      if ((t->trapframe = (struct trapframe *)kalloc()) == 0) {
+        freethread(t);
+        return 0; // Return instead of break
+      }
+      t->state = THREAD_RUNNABLE;
+      *t->trapframe = *p->trapframe;
+      t->trapframe->sp = stack_address;
+      t->trapframe->a0 = arg;
+      t->trapframe->ra = -1; // Sentinel value
+      t->trapframe->epc = (uint64)start_thread;
+      return t;
+    }
+  }
+  return 0;
+}
+void
+freethread(struct thread *t)
+{
+  if (t->trapframe)
+    kfree((void*)t->trapframe);
+  t->trapframe = 0;
+  t->id = 0;
+  t->join = 0;
+  t->state = THREAD_UNUSED;
+}
+void
+exitthread()
+{
+  struct proc *p = myproc();
+  uint id = p->current_thread->id;
+
+  for (struct thread *t = p->threads; t < &p->threads[NTHREAD]; t++) {
+    if (t->state == THREAD_JOINED && t->join == id) {
+      t->join = 0;
+      t->state = THREAD_RUNNABLE;
+    }
+  }
+
+  freethread(p->current_thread);
+
+  if (!thread_schd(p)) // We will implement thread_schd later
+    setkilled(p);
+
+  // Since thread_schd will not return if it finds a new thread,
+  // we must yield if it doesn't.
+  yield(); 
+}
+int
+jointhread(uint join_id)
+{
+  struct proc *p = myproc();
+  struct thread *t = p->current_thread;
+  if (!t)
+    return -3;
+
+  int found = 0;
+  uint current_id = join_id;
+  // Deadlock detection
+  while (current_id != 0) {
+    if (current_id == t->id)
+      return -1; // deadlock
+
+    uint target_id = current_id;
+    current_id = 0;
+    for (int i = 0; i < NTHREAD; i++) {
+      if (p->threads[i].id == target_id) {
+        current_id = p->threads[i].join;
+        found = 1; // Corrected from found = 13
+        break;
+      }
+    }
+  }
+
+  if (!found)
+    return -2;
+
+  t->join = join_id;
+  t->state = THREAD_JOINED;
+  yield(); // Give up CPU
+  return 0;
+}
+void
+sleepthread(int n, uint ticks0)
+{
+  struct thread *t = myproc()->current_thread;
+  t->sleep_n = n;
+  t->sleep_tick0 = ticks0;
+  t->state = THREAD_SLEEPING;
+  thread_schd(myproc());
+  yield(); // Give up CPU
+}
