@@ -101,6 +101,8 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_link(void);
 extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
+extern uint64 sys_thread(void); // [cite: 219]
+extern uint64 sys_jointhread(void); // [cite: 220]
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -126,6 +128,8 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_thread]   sys_thread, // [cite: 223, 225]
+[SYS_jointhread] sys_jointhread, // [cite: 224, 226]
 };
 
 void
@@ -133,15 +137,24 @@ syscall(void)
 {
   int num;
   struct proc *p = myproc();
+  struct thread *oldt = p->current_thread; // [cite: 233]
+  uint64 ret; // [cite: 234]
 
   num = p->trapframe->a7;
-  if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    // Use num to lookup the system call function for num, call it,
-    // and store its return value in p->trapframe->a0
-    p->trapframe->a0 = syscalls[num]();
+  if(num > 0 && num < NELEM(syscalls) && syscalls[num]) { // [cite: 236]
+    ret = syscalls[num](); // [cite: 239]
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);
-    p->trapframe->a0 = -1;
+    ret = -1; // [cite: 243]
+  }
+    struct thread *newt = p->current_thread; // [cite: 245]
+  if(oldt != newt){ // [cite: 246]
+    if(!oldt) // [cite: 247]
+      oldt = &p->threads[0]; // [cite: 248]
+    oldt->trapframe->a0 = ret; // [cite: 249]
+  }
+  if(oldt == newt || p->current_thread == oldt) { // [cite: 251]
+    p->trapframe->a0 = ret; // [cite: 252]
   }
 }
