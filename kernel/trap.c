@@ -70,8 +70,8 @@ usertrap(void)
   } else if (p->current_thread && p->current_thread->id != p->pid) { //
     // A trap from a secondary thread.
     if (r_sepc() != r_stval() || r_scause() != 0xc) {
-      printf("usertrap(): thread unexpected scause 0x%x pid=%d tid=%d\n", r_scause(), p->pid, p->current_thread->id);
-      printf("            sepc=0x%x stval=0x%x\n", r_sepc(), r_stval());
+      printf("usertrap(): thread unexpected scause 0x%lx pid=%d tid=%lu\n", r_scause(), p->pid, p->current_thread->id);
+      printf("            sepc=0x%lx stval=0x%lx\n", r_sepc(), r_stval());
     }
     exitthread(); //
   } else {
